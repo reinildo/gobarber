@@ -1,5 +1,5 @@
 import * as Yup from 'yup';
-import { startOfHour, parseISO, isBefore, format } from 'date-fns';
+import { startOfHour, parseISO, isBefore, format, subHours } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 
 import User from '../models/User';
@@ -16,7 +16,7 @@ class AppointmentController {
       order: ['date'],
       limit: 20,
       offset: (page - 1) * 20,
-      attributes: ['id', 'date'],
+      attributes: ['id', 'user_id', 'date'],
       include: [
         {
           model: User,
@@ -119,6 +119,36 @@ class AppointmentController {
       content: `Novo agendamento de ${user.name} para ${formatedDate}`,
       user: provider_id,
     });
+
+    return res.json(appointment);
+  }
+
+  async delete(req, res) {
+    const appointment = await Appointment.findByPk(req.params.id);
+
+    /**
+     * check if appointment belogs to logged user
+     */
+    if (appointment.user_id !== req.userId) {
+      return res
+        .status(401)
+        .json({ error: 'You are not allowed to cancel this appointment' });
+    }
+
+    /**
+     * appointments can be cancelled at least 2 hours in advance
+     */
+    const now = new Date();
+    const subDate = subHours(appointment.date, 2);
+    if (isBefore(subDate, now)) {
+      return res.status(401).json({
+        error: 'Appointments can only be cancelled 2 hours in advance',
+      });
+    }
+
+    appointment.canceled_at = now;
+
+    await appointment.save();
 
     return res.json(appointment);
   }
