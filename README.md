@@ -67,9 +67,6 @@ yarn
 yarn dev
 ```
 
-
-<hr>
-
 ## Contributing
 
 Ready to learn this exciting stack? Lets code and learn together.
